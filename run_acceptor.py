@@ -47,16 +47,15 @@ class MyDaemon(Daemon):
                 print var
                 while True:
                         poll = k.poll()
-
                         waiting = "Waiting..."
                         # print poll
                         # print waiting
-                    
 
-                        
                         if len(poll) > 1:
                                 # print poll
                                 if len(poll[1]) == 2:
+                                        # Try to make this so it displays the reason for the rejection.
+                                        
                                         # if poll[1][0] == '0xef':
                                         #         if poll[1][1] == 1 or poll[1][1] == 2 or poll[1][1] == 3:
                                         #                 print "Hold for processing..." 
@@ -76,7 +75,7 @@ class MyDaemon(Daemon):
 
  
 if __name__ == "__main__":
-        daemon = MyDaemon('/tmp/daemon-example.pid')
+        daemon = MyDaemon('/tmp/accepting-bills.pid')
         if len(sys.argv) == 2:
                 if 'start' == sys.argv[1]:
                         daemon.start()
