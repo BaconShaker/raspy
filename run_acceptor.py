@@ -38,7 +38,7 @@ cc = 0
 # Bill <--> CHANNEL
 bills = [1,5,10,20]
 
-class MyDaemon(Daemon):
+class AcceptBills(Daemon):
                 
         def run(self):
                 i = 0
@@ -75,7 +75,7 @@ class MyDaemon(Daemon):
 
  
 if __name__ == "__main__":
-        daemon = MyDaemon('/tmp/accepting-bills.pid')
+        daemon = AcceptBills('/tmp/accepting-bills.pid')
         if len(sys.argv) == 2:
                 if 'start' == sys.argv[1]:
                         daemon.start()
