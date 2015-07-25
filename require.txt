@@ -1,0 +1,4 @@
+eSSP==1.0.1
+mysql-connector-repackaged==0.3.1
+pyserial==2.7
+tabulate==0.7.5
