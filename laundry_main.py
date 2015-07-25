@@ -1,4 +1,8 @@
-#!/envs/bills/bin/python
+#!/usr/bin python
+
+# To install evdev on the pi..
+# 	$ apt-get install python-dev python-pip gcc
+# 	$ apt-get install linux-headers-$(uname -r)
 
 # This is the main script for the laundry room program. 
 
@@ -21,9 +25,9 @@
 # On card sipe at washer[i]:
 # 	
 
-from evdev import InputDevice, list_devices
+import serial
+ser = serial.Serial('/dev/ttyACM0', 9600)
 
-devices = [InputDevice(fn) for fn in list_devices()]
-
-for dev in devices:
-	print(dev.fn, dev.name, dev.phys)
+while True:
+	print ser.readline()
+	
