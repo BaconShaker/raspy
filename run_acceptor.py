@@ -1,14 +1,22 @@
 #!/envs/laundry/bin/python
- 
+import os
 import sys, time
 from datetime import datetime
 from daemon import Daemon
+import subprocess
 
 import eSSP
 import time
 
+# Figure out which /dev to listen to. 
+sort_bv = os.path.expanduser('~/laundry_prog/find_bv.sh')
+usb = subprocess.check_output([sort_bv])
+print "\nThis is USB:", usb[:-1]
+
+
 # k = eSSP.eSSP('/dev/tty.usbmodemfa131')
-k = eSSP.eSSP('/dev/ttyACM0')
+
+k = eSSP.eSSP(usb[:-1])
 # print k.sync()
 # print k.serial_number()
 # print k.enable()

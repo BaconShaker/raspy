@@ -1,33 +1,12 @@
 #!/bin/sh
-# Make sure you can make virtual environments.
-make_env(){
-	req=$(find ~/ -iname require.txt)
-	cd /envs
-	virtualenv laundry
-	source /envs/laundry/bin/activate
-	pip install -r $req
-}
+if [[ -d /Users/AsianCheddar ]]; then
+	echo 'this is a mac'
+	cd ~/raspy
+	scp run_acceptor.py laundry_main.py pi@raspy.local:~/laundry_prog
+fi
+if [[ -d /home/pi ]]; then
+	cd ~/laundry_prog
+	python run_acceptor.py start
+	python laundry_main.py 
+fi
 
-vir_check=$(pip list | grep virtualenv)
-echo $vir_check
-# if [[  $vir_check  ]]; then
-# 	echo 'virtualenv has been installed!'
-# else
-# 	echo "Need to install virtualenv"
-# 	pip install virtualenv
-# 	echo "Done"
-# fi
-# # Check if the environment root is in place, if not make it. 
-# if [[ -d /envs ]]; then
-# 	echo "/envs already exists. "
-# 	if [[ -d /envs/laundry/bin ]]; then
-# 		echo "Virtual environment for laundry exists!"
-# 	else
-# 		echo "Virtual environment for laundry did not exist, let's make it."
-# 		make_env
-# 	fi
-# else
-# 	cd /
-# 	mkdir envs
-# 	make_env
-# fi

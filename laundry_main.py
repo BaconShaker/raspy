@@ -1,4 +1,4 @@
-#!/usr/bin python
+#!/usr/bin/python
 
 # To install evdev on the pi..
 # 	$ apt-get install python-dev python-pip gcc
@@ -30,4 +30,3 @@ ser = serial.Serial('/dev/ttyACM0', 9600)
 
 while True:
 	print ser.readline()
-	
