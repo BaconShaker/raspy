@@ -83,7 +83,7 @@ class AcceptBills(Daemon):
 
  
 if __name__ == "__main__":
-        daemon = AcceptBills('/tmp/accepting-bills.pid')
+        daemon = AcceptBills('/tmp/accepting-bills420.pid')
         if len(sys.argv) == 2:
                 if 'start' == sys.argv[1]:
                         daemon.start()

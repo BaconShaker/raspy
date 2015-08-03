@@ -3,14 +3,15 @@
 import sys, os, time, atexit
 from signal import SIGTERM
 # import bill_accept
- 
-class Daemon:
+
+home_dir = os.path.expanduser('~/')
+class Daemon(object):
         """
         A generic daemon class.
        
         Usage: subclass the Daemon class and override the run() method
         """
-        def __init__(self, pidfile, stdin='/dev/null', stdout='/home/pi/bills/s_out.txt', stderr='/home/pi/bills/s_err.txt'):
+        def __init__(self, pidfile, stdin='/dev/null', stdout=home_dir + 'laundry_prog/s_out.txt', stderr=home_dir + 'laundry_prog/s_err.txt'):
                 self.stdin = stdin
                 self.stdout = stdout
                 self.stderr = stderr
