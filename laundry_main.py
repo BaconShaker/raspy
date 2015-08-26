@@ -19,8 +19,8 @@ from tabulate import tabulate
 # If it's a Mac, you're going to have to assign it manually, or change the 
 # script accordingly. 
 if sys.platform.startswith('darwin'):
-	k = eSSP.eSSP("/dev/tty.usbmodemfd121")
-	ser = serial.Serial("/dev/cu.usbmodemfa131", 115200, timeout = 0.1) 
+	k = eSSP.eSSP("/dev/cu.usbmodemfa1331")
+	ser = serial.Serial("/dev/cu.usbmodemfa1341", 115200, timeout = 0.1) 
 
 elif sys.platform.startswith('linux'):
 
@@ -75,29 +75,34 @@ class Bank(Daemon):
 					print "The amount in the queue is", self.q
 
 
-	def check_for_swipe(self, look_for = "UID Value:"):
+	def check_for_swipe( look_for = "UID Value:"):
 
 		# Use look_for to parse out the ID you wnt to lookup/check
-		line = str(ser.readline(255))
+		line = ser.readline()
 		if line is not None:
-
 			
-			# Parse the account bytes from the card
-			if look_for in line:
-				card_id = line[13:-2]
+			print "length of line =", len(line)
+			print line
+			
+			# A length of 6 means you're getting all 4 bytes of the UID and the
+			# 	newline and return characters in the line.
+			if len(line) == 6:
+					
+				card_id = line[:-2].encode('hex')
+				print int(card_id,16)
 				# print card_id
 				who_swiped = decode_card(card_id)
 				user = Tenant(who_swiped)
 				
-				
-				if self.q != 0:
-				 	new_bal = user.balance + self.q 
-				 	self.q = 0
-				 	user.update_balance(new_bal)
-				 	print "New queue value:", self.q
+		
+			if self.q != 0:
+			 	new_bal = user.balance + self.q 
+			 	self.q = 0
+			 	user.update_balance(new_bal)
+			 	print "New queue value:", self.q
 
-				else:
-				 	print "Current Balance for", user.name +":", user.balance
+			else:
+			 	print "Current Balance for", user.name +":", user.balance
 
 
 
