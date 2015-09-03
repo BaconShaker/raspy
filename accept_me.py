@@ -7,11 +7,12 @@ from daemon import Daemon
 import subprocess
 import eSSP
 import time
-import multiprocessing as mp
+from multiprocessing import Process
 
 import serial
 from sql_operator import *
 from tabulate import tabulate
+from threading import Thread
 
 
 # MOVE THIS TO THE __init__ file...
@@ -20,7 +21,7 @@ from tabulate import tabulate
 # script accordingly. 
 if sys.platform.startswith('darwin'):
 	k = eSSP.eSSP("/dev/tty.usbmodemfa1331")
-	ser = serial.Serial("/dev/cu.usbmodemfa1341", 115200, timeout = 0.1, bytesize=serial.EIGHTBITS) 
+	station_arduino = serial.Serial("/dev/cu.usbmodemfa1341", 115200, timeout = 0.1, bytesize=serial.EIGHTBITS) 
 
 elif sys.platform.startswith('linux'):
 
@@ -31,15 +32,36 @@ elif sys.platform.startswith('linux'):
 	k = eSSP.eSSP(bv[:-1])
 
 	# Find the port for the RFID
-	arduino = os.path.expanduser('~/laundry_prog/find_arduino.sh')
-	usb = subprocess.check_output([arduino])
+	ard_path = os.path.expanduser('~/laundry_prog/find_arduino.sh')
+	usb = subprocess.check_output([ard_path])
 	print "This is the port for the RFID antenna:", usb[:-1]
-	ser = serial.Serial(usb[:-1], 115200, timeout = 0.1) 
+	station_arduino = serial.Serial(usb[:-1], 115200, timeout = 0.1, bytesize=serial.EIGHTBITS) 
+	
+	# Set screen width in characters
+	SCREEN_WIDTH = 16
+
+	# Initialize serial connection
+	disp = serial.Serial(port='/dev/ttyAMA0', baudrate=19200)
+
+	#~ # Set display to with cursor blink (25 for blinking cursor)
+	#~ disp.write(chr(22))
+
+	#~ # Set backlight to true
+	#~ disp.write(chr(17))
+
+	#~ # Initialize screen
+	#~ first_text = "Hello, I will be your screen for the duration of this bank instance."
+	#~ time.sleep(1.2)
+
+	#~ # Clear screen; we must pause at least 5 ms after this command
+	#~ disp.write(chr(12))
+	#~ time.sleep(0.01)
 
 
 
 
-		
+# Do some inital set-up on the usb devices.
+# Start with the Bill Validator:
 print k.sync()
 print k.enable_higher_protocol()
 # Original
@@ -48,6 +70,65 @@ print k.set_inhibits(k.easy_inhibit([1, 1, 1, 1]), '0x00')
 print k.enable()
 bills = [1,5,10,20]
 
+
+
+
+def scrolltext(text):
+
+    # Move cursor to far right of screen, in preparation for scrolling
+    cursor_start = 143
+
+    # Initialize window's head and tail
+    head = tail = 0
+
+    while tail <= len(text):
+
+        # Actually move the cursor to the far right as set above
+        disp.write(chr(cursor_start))
+
+        # Write out text "window"
+        disp.write(text[head:tail])
+
+        # Move the start cursor depending on whether or not the text
+        # has reached the far left of the screen, as it scrolls to the left
+        cursor_start = cursor_start - 1 if not cursor_start <= 128 else 128
+
+        # Updated window  tail
+        tail += 1
+
+        # Update window head
+        head = head + 1 if tail >= SCREEN_WIDTH else 0
+        time.sleep(0.4)
+        
+
+def disp_bal(balance = "No record" , name = "None"):
+	# Make a sound so we know the swipe worked. 
+	disp.write(chr(216))
+	disp.write(chr(209))
+	disp.write(chr(223))
+	disp.write(chr(225))
+	disp.write(chr(227))
+	
+	# Clear the screen. 
+	disp.write(chr(12))
+	time.sleep(.01)
+	disp.write(chr(128))
+	
+	# write some words
+	disp.write(str(name))
+	
+	# Move down a line
+	disp.write(chr(148))
+	
+	# Print the balance and wait
+	disp.write("    $" + str(balance))
+	time.sleep(5)
+	
+	# Clear the screen. 
+	disp.write(chr(12))
+	time.sleep(.01)
+
+
 		
 
 class Bank(object):
@@ -55,9 +136,17 @@ class Bank(object):
 	def __init__(self):
 		super(Bank, self).__init__()
 		print "This is a Bank object. The initial value is 0."
+		# Hopefully it foesn't matter that user hasn't been initiated yet...
+		self.screener = []
+		self.screener.append( Process(target = disp_bal, args = (  "42","Initial Screen", )) )
+		self.screener[0].start()
 		self.q = 0 # This value will change
 		self.account_num = int()
 		self.value = 0 # This is how much TOTAL money has been collected
+		self.last_swipe = None
+		
+		
+						
 
 
 	def check_for_bill(self):
@@ -75,10 +164,10 @@ class Bank(object):
 					print "The amount in the queue is", self.q
 
 
-	def check_for_swipe(self, look_for = "UID Value:"):
+	def check_for_swipe(self):
 
 		# Use look_for to parse out the ID you wnt to lookup/check
-		line = ser.readline()
+		line = station_arduino.readline()
 		if line is not None:
 			
 			#~ print "length of line =", len(line)
@@ -86,35 +175,83 @@ class Bank(object):
 			
 			# A length of 6 means you're getting all 4 bytes of the UID and the
 			# 	newline and return characters in the line.
-			if len(line) == 6:
+			print "Processes:", self.screener
+			
+			if len(line) == 6 and not self.screener[0].is_alive():
+				print "this is working!"
 				
 				# Get the UID	
 				card_id = line[:-2].encode('hex')
 				
+				self.last_swipe = card_id
+				
 				# Look up who swiped using the UID
 				who_swiped = decode_card(card_id) # HEX --> INT
-				user = Tenant(who_swiped)
 				
-				if self.q != 0:
-					new_bal = user.balance + self.q 
-					self.q = 0
-					user.update_balance(new_bal)
-					print "	Queue reset to:" , self.q
+				
+				return who_swiped
+				
+		else:
+			return False
+				
+				
+				
+			
+				
 
-				else:
-					print "Current Balance for", user.name +":", user.balance
-
-
-
+	# This doesn't have to be a part of the Class,
+	# it can be a separate function but then it will need to be Threaded...
 	def run(self):
 		
+		
+		
+		
 		while True:
+			if len(self.screener) == 1:
+				
+				print self.screener[0].is_alive()
+			else: 
+				"Something is different with screener, ", len(self.screener)
 
 
 			self.check_for_bill()
 
 
-			self.check_for_swipe()
+			station_swipe = self.check_for_swipe()
+			
+			if station_swipe:
+				print "There was a swipe at the station."
+				user = Tenant(station_swipe)
+				#~ self.display_on = Thread(target = disp_bal, args = (name = user.name, balance = user.balance) )	
+				# If there's money saved in the queue, add it to the db then display the information. 
+				if self.q != 0:
+					
+					new_bal = user.balance + self.q 
+					
+					
+					
+					user.update_balance(new_bal)
+					self.q = 0
+					print "	Queue reset to:" , self.q
+					
+					time.sleep(.1)
+				if not self.screener[0].is_alive():
+					print "The display should be started now"
+					self.screener[0] = Process(target = disp_bal, args = ( user.balance, user.name, ) )
+					self.screener[0].start()
+				
+				else:
+					print "Display is on"
+						
+				
+
+						
+						
+				#~ else:
+					#~ print "Current Balance for", user.name +":", user.balance
+					#~ if not self.display_on.is_alive():
+						#~ self.display_on.start()
+			
 
 
 		
@@ -125,6 +262,7 @@ class Bank(object):
 
 
 if __name__ == '__main__':
+	
 	bank = Bank()
 	bank.run()
 

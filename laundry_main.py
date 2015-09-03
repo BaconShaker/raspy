@@ -18,9 +18,34 @@ from tabulate import tabulate
 # Figure out which /dev to listen to. 
 # If it's a Mac, you're going to have to assign it manually, or change the 
 # script accordingly. 
+
+def bv_port(looker):
+	# Find the port for the BV
+	find_bv = os.path.expanduser(looker)
+	bv = subprocess.check_output([find_bv])
+	print "\nThis is the port for the Bill Validator:", bv[:-1]
+	return eSSP.eSSP(bv[:-1])
+
+def arduino_port(finder):
+	# Find the port for the RFID
+	arduino = os.path.expanduser(finder)
+	usb = subprocess.check_output([arduino])
+	print "This is the port for the RFID antenna:", usb[:-1]
+	return serial.Serial(usb[:-1], 115200, timeout = 0.1, bytesize=serial.EIGHTBITS) 
+
+
 if sys.platform.startswith('darwin'):
-	k = eSSP.eSSP("/dev/cu.usbmodemfa1331")
-	ser = serial.Serial("/dev/cu.usbmodemfa1341", 115200, timeout = 0.1) 
+	mpath = os.path.expanduser('~/raspy/find_bv.sh')
+	k = bv_port(mpath)
+	mpath = os.path.expanduser('~/raspy/find_arduino.sh')
+	ser = arduino_port() 
+	
+	# Find the port for the BV
+	find_bv = os.path.expanduser('~/raspy/find_bv.sh')
+	bv = subprocess.check_output([find_bv])
+	print "\nThis is the port for the Bill Validator:", bv[:-1]
+	k = eSSP.eSSP(bv[:-1])
+	
 
 elif sys.platform.startswith('linux'):
 
@@ -34,12 +59,12 @@ elif sys.platform.startswith('linux'):
 	arduino = os.path.expanduser('~/laundry_prog/find_arduino.sh')
 	usb = subprocess.check_output([arduino])
 	print "This is the port for the RFID antenna:", usb[:-1]
-	ser = serial.Serial(usb[:-1], 115200, timeout = 0.1) 
+	ser = serial.Serial(usb[:-1], 115200, timeout = 0.1, bytesize=serial.EIGHTBITS) 
 
 
 
 
-		
+# Get the Validator started
 print k.sync()
 print k.enable_higher_protocol()
 # Original
@@ -54,7 +79,7 @@ class Bank(Daemon):
 	"""docstring for Bank"""
 	def __init__(self, pid = '/tmp/accepting-bills420.pid'):
 		super(Bank, self).__init__(pid)
-		print "This is a Bank object. The initial value is 0."
+		print "This is a Bank object. The initial q value is 0."
 		self.q = 0 # This value will change
 		self.account_num = int()
 		self.value = 0 # This is how much TOTAL money has been collected
@@ -75,9 +100,9 @@ class Bank(Daemon):
 					print "The amount in the queue is", self.q
 
 
-	def check_for_swipe( look_for = "UID Value:"):
+	def check_for_swipe(self):
 
-		# Use look_for to parse out the ID you wnt to lookup/check
+		# Read the USB port
 		line = ser.readline()
 		if line is not None:
 			
@@ -95,14 +120,14 @@ class Bank(Daemon):
 				user = Tenant(who_swiped)
 				
 		
-			if self.q != 0:
-			 	new_bal = user.balance + self.q 
-			 	self.q = 0
-			 	user.update_balance(new_bal)
-			 	print "New queue value:", self.q
+				if self.q != 0:
+					new_bal = user.balance + self.q 
+					self.q = 0
+					user.update_balance(new_bal)
+					print "New queue value:", self.q
 
-			else:
-			 	print "Current Balance for", user.name +":", user.balance
+				else:
+					print "Current Balance for", user.name +":", user.balance
 
 
 
@@ -117,11 +142,7 @@ class Bank(Daemon):
 			self.check_for_swipe()
 
 
-		
 
-
-
-		
 
 
 if __name__ == '__main__':
