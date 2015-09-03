@@ -175,7 +175,6 @@ class Bank(object):
 			
 			# A length of 6 means you're getting all 4 bytes of the UID and the
 			# 	newline and return characters in the line.
-			print "Processes:", self.screener
 			
 			if len(line) == 6 and not self.screener[0].is_alive():
 				print "this is working!"
@@ -207,11 +206,11 @@ class Bank(object):
 		
 		
 		while True:
-			if len(self.screener) == 1:
+			#~ if len(self.screener) == 1:
 				
-				print self.screener[0].is_alive()
-			else: 
-				"Something is different with screener, ", len(self.screener)
+				#~ print self.screener[0].is_alive()
+			#~ else: 
+				#~ "Something is different with screener, ", len(self.screener)
 
 
 			self.check_for_bill()
