@@ -107,10 +107,13 @@ def scrolltext(text):
         time.sleep(0.4)
         
 
-def disp_bal(balance = "No record" , name = "None"):
-	# Make a sound so we know the swipe worked. 
+def disp_bal(balance = "No record" , name = "None"): 
+	
+	# Make sure the screen is on and backlit
 	disp.write(chr(22))
 	disp.write(chr(17))
+	
+	# Make a sound so we know the swipe worked.
 	disp.write(chr(216))
 	disp.write(chr(209))
 	disp.write(chr(223))
@@ -140,6 +143,20 @@ def disp_bal(balance = "No record" , name = "None"):
 	disp.write(chr(18))
 	
 	print "The screen should now be off"
+	
+def disp_q(value):
+	# Make sure the screen is on and backlit
+	disp.write(chr(22))
+	disp.write(chr(17))
+	
+	# Clear the screen
+	disp.write(chr(12))
+	time.sleep(.01)
+	disp.write(chr(128))
+	
+	# Write the string and value to the screen
+	disp.write("To add: " + str(int(value )))
+	
 
 
 		
@@ -227,14 +244,17 @@ class Bank(object):
 
 
 			self.check_for_bill()
+			if self.q != 0:
+				disp_q(self.q)
 
 
 			station_swipe = self.check_for_swipe()
 			
+			
 			if station_swipe:
 				print "There was a swipe at the station."
 				user = Tenant(station_swipe)
-				#~ self.display_on = Thread(target = disp_bal, args = (name = user.name, balance = user.balance) )	
+					
 				# If there's money saved in the queue, add it to the db then display the information. 
 				if self.q != 0:
 					
