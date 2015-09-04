@@ -80,43 +80,6 @@ bills = [1,5,10,20]
 
         
 
-def disp_bal(second_line = "No record" , first_line = "None"): 
-	print "Display: ON"
-
-	# Make sure the screen is on and backlit
-	disp.write(chr(22))
-	disp.write(chr(17))
-	
-	# Make a sound so we know the swipe worked.
-	disp.write(chr(216))
-	disp.write(chr(209))
-	disp.write(chr(223))
-	disp.write(chr(225))
-	disp.write(chr(227))
-	
-	# Clear the screen. 
-	disp.write(chr(12))
-	time.sleep(.01)
-	disp.write(chr(128))
-	
-	# write some words
-	disp.write(str(first_line))
-	
-	# Move down a line
-	disp.write(chr(148))
-	
-	# Print the balance and wait
-	disp.write(second_line)
-	time.sleep(5)
-	
-	# Clear the screen. 
-	disp.write(chr(12))
-	time.sleep(.01)
-	
-	disp.write(chr(21))
-	disp.write(chr(18))
-	
-	print "Display: OFF"
 	
 def disp_q(value):
 	# Need to do things diffrently if the screen is OFF
@@ -143,17 +106,26 @@ class Bank(object):
 		print "This is a Bank object. The initial value is 0."
 		# Hopefully it foesn't matter that user hasn't been initiated yet...
 		self.screener = []
-		self.screener.append( Process(target = disp_bal, args = (  "Second Line","Initial Screen", )) )
+		disp.write(chr(22))
+		disp.write(chr(17))
+		self.screener.append( Process(target = self.disp_bal, args = (  "Initial Screen", "Second Line" )) )
 		self.screener[0].start()
 		self.q = 0 # This value will change
 		self.account_num = int()
 		self.value = 0 # This is how much TOTAL money has been collected
 		self.last_swipe = None
 		
-	def disp_bal(self, first_line = "No record" , second_line = "None"): 
+	def disp_bal(self, first_line = "No record" , second_line = "None", keep_on = False): 
 		print "Display: ON"
+		print "	", first_line
+		print "	", second_line
 
 		# Make sure the screen is on and backlit
+		if self.screener[0].is_alive():
+			print "Screener is alive!"
+		
+		else:
+			print "Screener is dead"
 		disp.write(chr(22))
 		disp.write(chr(17))
 		
@@ -177,21 +149,36 @@ class Bank(object):
 		
 		# Print the balance and wait
 		disp.write(second_line)
-		time.sleep(5)
+		
 		
 		# Clear the screen. 
-		disp.write(chr(12))
-		time.sleep(.01)
+
 		
-		disp.write(chr(21))
-		disp.write(chr(18))
-		
-		print "Display: OFF"
+		if keep_on == True:
+			print "	This should keep the screen lit"
+			
+		else:
+			time.sleep(5)
+			disp.write(chr(12))
+			time.sleep(.01)
+			disp.write(chr(21))
+			disp.write(chr(18))
+			
+			print "Display: OFF"
 						
 
 
 	def check_for_bill(self):
-
+		#~ print self.screener[0].is_alive()
+		#~ if self.q > 0: #and not self.screener[0].is_alive():
+			#~ print len(self.screener),  self.screener[0].is_alive()
+			#~ self.screener[0] = Process(target = self.disp_bal, args = ( "Swipe now to add", "value:" + str(self.q) , True))
+			#~ self.screener[0].start()
+		#~ else:
+			#~ pass
+			
+		#~ print not self.screener[0].is_alive()
+		
 		poll =  k.poll()
 		# len	 pol = 0 when nothing is happening. 
 		if len(poll) > 1:
@@ -203,6 +190,13 @@ class Bank(object):
 					self.value += bills[poll[1][1] - 1 ]
 					self.q += bills[poll[1][1] - 1 ]
 					print "The amount in the queue is", self.q
+					
+					if self.screener[0].is_alive():
+						self.screener[0].terminate()
+						time.sleep(.01)
+						
+					self.screener[0] = Process(target = self.disp_bal, args = ( "Swipe now to add", "value:" + str(self.q) , True))
+					self.screener[0].start()
 
 
 	def check_for_swipe(self):
@@ -217,9 +211,7 @@ class Bank(object):
 			# A length of 6 means you're getting all 4 bytes of the UID and the
 			# 	newline and return characters in the line.
 			
-			if len(line) == 6 :
-				
-				
+			if len(line) == 6 and not self.screener[0].is_alive():
 				# Get the UID	
 				card_id = line[:-2].encode('hex')
 				
@@ -241,46 +233,34 @@ class Bank(object):
 	# it can be a separate function but then it will need to be Threaded...
 	def run(self):	
 		while True:
-			
+			#~ print "This should scroll"
 			self.check_for_bill()
-			if self.q != 0:
-				disp_q(self.q)
-				
+			
 			card_id = self.check_for_swipe()
 			
 			# Only handle card swipes if the display is free AND there's a card at the station.
-			if card_id and not self.screener[0].is_alive():
+			if card_id :
 			
 				try: 
 					accepted_card = account_lookup(card_id)
-					
 					print "There was a swipe at the station."
-			
-				
 					user = Tenant(accepted_card)
 						
 					# If there's money saved in the queue, add it to the db then display the information. 
 					if self.q != 0:
-						
 						new_bal = user.balance + self.q 
-						
-						
-						
 						user.update_balance(new_bal)
+						
+						# RESET the queue
 						self.q = 0
 						print "	Queue reset to:" , self.q
-						
 						time.sleep(.1)
-						if not self.screener[0].is_alive():
-							self.screener[0] = Process(target = sefl.disp_bal, args = ( user.name, "    $" + str(int(new_bal)),  ) )
-							self.screener[0].start()
-						else:
-							print "Display is on"
+						
+						
 					
 					else:
-					
-						print "The display should be started now"
-						self.screener[0] = Process(target = self.disp_bal, args = ( user.name,  "    $" + str(int(user.balance)), ) )
+						
+						self.screener[0] = Process(target = self.disp_bal, args = ( user.name,  "    $" + str(int(user.balance)) ) )
 						self.screener[0].start()
 							
 					
@@ -293,7 +273,8 @@ class Bank(object):
 					if self.screener[0].is_alive():
 						self.screener[0].terminate()
 						time.sleep(.05)
-					self.screener[0] = Process(target = self.disp_bal, args = ( "NOT RECOGNIZED:", NC.card_id ,) )
+						
+					self.screener[0] = Process(target = self.disp_bal, args = ( "NOT RECOGNIZED:", NC.card_id ) )
 					self.screener[0].start()
 					
 				
