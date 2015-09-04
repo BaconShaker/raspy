@@ -8,7 +8,7 @@ import subprocess
 import eSSP
 import time
 from multiprocessing import Process
-
+from errors import *
 import serial
 from sql_operator import *
 from tabulate import tabulate

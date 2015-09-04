@@ -4,6 +4,7 @@ from __init__ import __sql__
 import mysql.connector
 import os
 from tabulate import tabulate
+from errors import *
 
 # Connect to SQL Database
 db = mysql.connector.connect(**__sql__)
@@ -75,11 +76,6 @@ def decode_card(babble = "0xE1 0x83 0x53 0x23"):
 	
 	
 
-# This is an ERROR CLASS
-class CardNotFound(Exception):
-	def __init__(self, card_id):
-		self.card_id = card_id
-	
 
 
 class Database(object):
