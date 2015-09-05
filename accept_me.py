@@ -120,12 +120,6 @@ class Bank(object):
 		print "	", first_line
 		print "	", second_line
 
-		# Make sure the screen is on and backlit
-		if self.screener[0].is_alive():
-			print "Screener is alive!"
-		
-		else:
-			print "Screener is dead"
 		disp.write(chr(22))
 		disp.write(chr(17))
 		
@@ -169,15 +163,7 @@ class Bank(object):
 
 
 	def check_for_bill(self):
-		#~ print self.screener[0].is_alive()
-		#~ if self.q > 0: #and not self.screener[0].is_alive():
-			#~ print len(self.screener),  self.screener[0].is_alive()
-			#~ self.screener[0] = Process(target = self.disp_bal, args = ( "Swipe now to add", "value:" + str(self.q) , True))
-			#~ self.screener[0].start()
-		#~ else:
-			#~ pass
-			
-		#~ print not self.screener[0].is_alive()
+	
 		
 		poll =  k.poll()
 		# len	 pol = 0 when nothing is happening. 
@@ -248,23 +234,32 @@ class Bank(object):
 						
 					# If there's money saved in the queue, add it to the db then display the information. 
 					if self.q != 0:
+						old_bal = user.balance
 						new_bal = user.balance + self.q 
 						user.update_balance(new_bal)
+						
 						
 						# RESET the queue
 						self.q = 0
 						print "	Queue reset to:" , self.q
 						time.sleep(.1)
 						
+						# Display old and new card values
+						self.screener[0] = Process(
+												target = self.disp_bal, 
+												args = ( "OLD: $" + str(int(old_bal)), 
+														 "NEW: $" + str(int(new_bal)) ) 
+												)
+						self.screener[0].start()
 						
-					
 					else:
-						
-						self.screener[0] = Process(target = self.disp_bal, args = ( user.name,  "    $" + str(int(user.balance)) ) )
+						self.screener[0] = Process(
+												target = self.disp_bal, 
+												args = ( user.name, 
+														"    $" + str(int(user.balance)) ) 
+												)
 						self.screener[0].start()
 							
-					
-					
 					
 				except CardNotFound as NC:
 					

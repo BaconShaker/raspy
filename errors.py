@@ -7,7 +7,11 @@ class CardNotFound(Exception):
 	
 	
 if __name__ == "__main__":
-	
-	raise CardNotFound(12343)
+	try:
+		raise CardNotFound(12343)
+	except CardNotFound as aa:
+		print "This is within a try/except statement."
+		print "	", aa.card_id
+	print "Something goes here"
 		
 	
